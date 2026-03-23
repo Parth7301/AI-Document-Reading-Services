@@ -1,0 +1,1374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Smart Document Reader — AI Powered</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0d0f14;
+      --surface:   #161a23;
+      --surface2:  #1e2333;
+      --border:    #2a3045;
+      --accent:    #4f8ef7;
+      --accent2:   #7c5cfc;
+      --success:   #22c55e;
+      --warning:   #f59e0b;
+      --danger:    #ef4444;
+      --text:      #e8eaf0;
+      --muted:     #8b93a8;
+      --radius:    12px;
+      --radius-sm: 8px;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 32px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 18px;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .logo-icon { font-size: 24px; }
+    .health-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: all .2s;
+      color: var(--muted);
+    }
+    .health-badge:hover { border-color: var(--accent); color: var(--text); }
+    .health-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--muted);
+      animation: none;
+    }
+    .health-dot.ok { background: var(--success); animation: pulse-green 2s infinite; }
+    .health-dot.err { background: var(--danger); }
+    @keyframes pulse-green {
+      0%,100% { box-shadow: 0 0 0 0 rgba(34,197,94,.4); }
+      50%      { box-shadow: 0 0 0 5px rgba(34,197,94,0); }
+    }
+
+    /* ── Layout ── */
+    .app { display: flex; flex: 1; overflow: hidden; }
+
+    /* ── Sidebar ── */
+    nav {
+      width: 240px;
+      min-width: 240px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 24px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      overflow-y: auto;
+    }
+    .nav-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 4px 12px 8px;
+      margin-top: 8px;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all .15s;
+      font-size: 13.5px;
+      color: var(--muted);
+      border: 1px solid transparent;
+      user-select: none;
+    }
+    .nav-item:hover { background: var(--surface2); color: var(--text); }
+    .nav-item.active {
+      background: rgba(79,142,247,.12);
+      border-color: rgba(79,142,247,.3);
+      color: var(--accent);
+      font-weight: 500;
+    }
+    .nav-icon { font-size: 18px; width: 22px; text-align: center; }
+
+    /* ── Main Content ── */
+    main {
+      flex: 1;
+      padding: 32px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .page-title {
+      font-size: 22px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .page-subtitle { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+    }
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: 16px;
+    }
+
+    /* ── Upload Zone ── */
+    .upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 48px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all .2s;
+      position: relative;
+      background: var(--surface2);
+    }
+    .upload-zone:hover, .upload-zone.dragover {
+      border-color: var(--accent);
+      background: rgba(79,142,247,.06);
+    }
+    .upload-zone input[type=file] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+    .upload-icon { font-size: 40px; margin-bottom: 12px; }
+    .upload-zone h3 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+    .upload-zone p { font-size: 12px; color: var(--muted); }
+    .file-preview {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-top: 12px;
+    }
+    .file-preview .file-name { font-size: 13px; font-weight: 500; flex: 1; }
+    .file-preview .file-size { font-size: 11px; color: var(--muted); }
+    .file-preview .remove-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 16px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      transition: color .15s;
+    }
+    .file-preview .remove-btn:hover { color: var(--danger); }
+
+    /* ── Form Controls ── */
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group label { font-size: 12px; font-weight: 500; color: var(--muted); }
+    select, input[type=text] {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 9px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color .15s;
+      width: 100%;
+    }
+    select:focus, input[type=text]:focus { border-color: var(--accent); }
+    select option { background: var(--surface2); }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-top: 1px solid var(--border);
+      margin-top: 8px;
+    }
+    .toggle-label { font-size: 13px; color: var(--muted); }
+    .toggle {
+      width: 40px; height: 22px;
+      background: var(--border);
+      border-radius: 11px;
+      position: relative;
+      cursor: pointer;
+      transition: background .2s;
+      border: none;
+      flex-shrink: 0;
+    }
+    .toggle.on { background: var(--accent); }
+    .toggle::after {
+      content: '';
+      position: absolute;
+      top: 3px; left: 3px;
+      width: 16px; height: 16px;
+      background: white;
+      border-radius: 50%;
+      transition: left .2s;
+    }
+    .toggle.on::after { left: 21px; }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 11px 22px;
+      border-radius: var(--radius-sm);
+      font-size: 13.5px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      border: none;
+      transition: all .15s;
+      white-space: nowrap;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: white;
+      width: 100%;
+      margin-top: 20px;
+      padding: 13px;
+      font-size: 14px;
+    }
+    .btn-primary:hover { opacity: .9; transform: translateY(-1px); }
+    .btn-primary:active { transform: none; }
+    .btn-primary:disabled {
+      opacity: .4;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .btn-sm {
+      padding: 6px 14px;
+      font-size: 12px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    .btn-sm:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Loading ── */
+    .loader {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .processing-card {
+      background: var(--surface2);
+      border: 1px solid rgba(79,142,247,.3);
+      border-radius: var(--radius);
+      padding: 32px;
+      text-align: center;
+    }
+    .processing-card .big-loader {
+      width: 48px; height: 48px;
+      border: 3px solid rgba(79,142,247,.2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+      margin: 0 auto 16px;
+    }
+    .processing-card h3 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+    .processing-card p { font-size: 12px; color: var(--muted); }
+
+    /* ── Results ── */
+    .result-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .result-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+    .badge-success { background: rgba(34,197,94,.12); color: var(--success); border: 1px solid rgba(34,197,94,.25); }
+    .badge-warning { background: rgba(245,158,11,.12); color: var(--warning); border: 1px solid rgba(245,158,11,.25); }
+    .badge-danger  { background: rgba(239,68,68,.12);  color: var(--danger);  border: 1px solid rgba(239,68,68,.25);  }
+    .badge-info    { background: rgba(79,142,247,.12); color: var(--accent);  border: 1px solid rgba(79,142,247,.25); }
+    .badge-muted   { background: rgba(139,147,168,.12); color: var(--muted); border: 1px solid var(--border); }
+
+    .confidence-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .confidence-bar label { font-size: 12px; color: var(--muted); width: 90px; }
+    .bar-track {
+      flex: 1;
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      transition: width .6s ease;
+    }
+    .confidence-bar span { font-size: 12px; font-weight: 600; color: var(--accent); width: 36px; text-align: right; }
+
+    .fields-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 12px;
+    }
+    .field-item {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      transition: border-color .15s;
+    }
+    .field-item:hover { border-color: rgba(79,142,247,.4); }
+    .field-key {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: 5px;
+    }
+    .field-val {
+      font-size: 13.5px;
+      font-weight: 500;
+      color: var(--text);
+      word-break: break-word;
+    }
+    .field-val.null-val { color: var(--border); font-style: italic; font-size: 12px; }
+
+    /* Marks table */
+    .marks-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .marks-table th {
+      text-align: left;
+      padding: 8px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+    }
+    .marks-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(42,48,69,.5);
+    }
+    .marks-table tr:last-child td { border-bottom: none; }
+    .marks-table tr:hover td { background: var(--surface2); }
+
+    /* Expiry specific */
+    .expiry-summary {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .expiry-stat {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      text-align: center;
+    }
+    .expiry-stat .stat-val {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .expiry-stat .stat-label { font-size: 11px; color: var(--muted); }
+
+    /* JSON viewer */
+    .json-viewer {
+      background: #0a0c12;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      overflow-x: auto;
+      max-height: 400px;
+      overflow-y: auto;
+      white-space: pre;
+      color: #a8b3cf;
+    }
+    .json-viewer .jk { color: #7c9ef7; }
+    .json-viewer .js { color: #86efac; }
+    .json-viewer .jn { color: #f9a8d4; }
+    .json-viewer .jb { color: #fbbf24; }
+
+    /* Error box */
+    .error-box {
+      background: rgba(239,68,68,.07);
+      border: 1px solid rgba(239,68,68,.25);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      font-size: 13px;
+      color: #fca5a5;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+    .tab {
+      padding: 9px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      color: var(--muted);
+      transition: all .15s;
+      margin-bottom: -1px;
+      background: none;
+      border-top: none;
+      border-left: none;
+      border-right: none;
+      font-family: inherit;
+    }
+    .tab:hover { color: var(--text); }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* History */
+    .history-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: border-color .15s;
+      margin-bottom: 8px;
+    }
+    .history-item:hover { border-color: var(--accent); }
+    .history-icon { font-size: 24px; }
+    .history-info { flex: 1; }
+    .history-info .h-name { font-size: 13.5px; font-weight: 500; margin-bottom: 3px; }
+    .history-info .h-meta { font-size: 11px; color: var(--muted); }
+    .history-time { font-size: 11px; color: var(--muted); }
+
+    /* Toast */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 12px 20px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 500;
+      z-index: 9999;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all .25s;
+      pointer-events: none;
+    }
+    #toast.show { opacity: 1; transform: translateY(0); }
+    #toast.success { background: var(--success); color: white; }
+    #toast.error   { background: var(--danger);  color: white; }
+    #toast.info    { background: var(--accent);  color: white; }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      nav { display: none; }
+      main { padding: 16px; }
+      .form-row { grid-template-columns: 1fr; }
+      .expiry-summary { grid-template-columns: 1fr; }
+      .fields-grid { grid-template-columns: 1fr; }
+    }
+
+    .hidden { display: none !important; }
+    .divider { height: 1px; background: var(--border); margin: 4px 0; }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <div class="logo">
+    <span class="logo-icon">📄</span>
+    Smart Document Reader
+  </div>
+  <div class="health-badge" onclick="checkHealth()" title="Click to check system health">
+    <div class="health-dot" id="healthDot"></div>
+    <span id="healthText">Checking...</span>
+  </div>
+</header>
+
+<div class="app">
+  <!-- Sidebar -->
+  <nav>
+    <div class="nav-label">ID Documents</div>
+    <div class="nav-item active" data-page="aadhaar" onclick="showPage('aadhaar')">
+      <span class="nav-icon">🪪</span> Aadhaar Card
+    </div>
+    <div class="nav-item" data-page="pan" onclick="showPage('pan')">
+      <span class="nav-icon">💳</span> PAN Card
+    </div>
+
+    <div class="nav-label">Academic</div>
+    <div class="nav-item" data-page="board" onclick="showPage('board')">
+      <span class="nav-icon">🎓</span> Board Certificate
+    </div>
+    <div class="nav-item" data-page="tc" onclick="showPage('tc')">
+      <span class="nav-icon">📋</span> Transfer Certificate
+    </div>
+    <div class="nav-item" data-page="marksheet" onclick="showPage('marksheet')">
+      <span class="nav-icon">📊</span> Marksheet
+    </div>
+
+    <div class="nav-label">Government</div>
+    <div class="nav-item" data-page="expiry" onclick="showPage('expiry')">
+      <span class="nav-icon">⏳</span> Expiry Checker
+    </div>
+
+    <div class="divider" style="margin: 12px 0;"></div>
+    <div class="nav-label">Tools</div>
+    <div class="nav-item" data-page="batch" onclick="showPage('batch')">
+      <span class="nav-icon">📦</span> Batch Upload
+    </div>
+    <div class="nav-item" data-page="history" onclick="showPage('history')">
+      <span class="nav-icon">🕐</span> History
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <main id="main"></main>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── Config ──────────────────────────────────────────────────────────────────
+const API = window.location.origin;
+
+// ── State ───────────────────────────────────────────────────────────────────
+let currentPage = 'aadhaar';
+let history_data = JSON.parse(localStorage.getItem('docHistory') || '[]');
+
+// ── Page Definitions ─────────────────────────────────────────────────────────
+const PAGES = {
+  aadhaar: {
+    icon: '🪪', title: 'Aadhaar Card Reader',
+    subtitle: 'Extract name, DOB, gender, address, and Aadhaar number using AI + OCR',
+    endpoint: '/api/v1/documents/aadhaar/read',
+    accept: '.jpg,.jpeg,.png,.pdf,.webp',
+    extraFields: [],
+    resultType: 'fields',
+    docType: 'Aadhaar Card',
+  },
+  pan: {
+    icon: '💳', title: 'PAN Card Reader',
+    subtitle: 'Extract PAN number, name, date of birth, and father\'s name',
+    endpoint: '/api/v1/documents/pan/read',
+    accept: '.jpg,.jpeg,.png,.pdf,.webp',
+    extraFields: [],
+    resultType: 'fields',
+    docType: 'PAN Card',
+  },
+  board: {
+    icon: '🎓', title: 'Board Certificate Reader',
+    subtitle: 'Extract details from SSC / HSC / Diploma passing certificates (all boards)',
+    endpoint: '/api/v1/documents/board-certificate/read',
+    accept: '.jpg,.jpeg,.png,.pdf,.webp',
+    extraFields: [],
+    resultType: 'fields',
+    docType: 'Board Certificate',
+  },
+  tc: {
+    icon: '📋', title: 'Transfer / Leaving Certificate',
+    subtitle: 'Extract student details, dates, conduct, and school info from TC/LC',
+    endpoint: '/api/v1/documents/tc/read',
+    accept: '.jpg,.jpeg,.png,.pdf,.webp',
+    extraFields: [],
+    resultType: 'fields',
+    docType: 'Transfer Certificate',
+  },
+  marksheet: {
+    icon: '📊', title: 'Marksheet Reader',
+    subtitle: 'Extract subject-wise marks, percentage, and grades from 10th/12th marksheets',
+    endpoint: '/api/v1/documents/marksheet/read',
+    accept: '.jpg,.jpeg,.png,.pdf,.webp',
+    extraFields: [
+      { name: 'exam_class', label: 'Exam Class', type: 'select',
+        options: [{v:'auto',l:'Auto Detect'},{v:'10',l:'10th (SSC)'},{v:'12',l:'12th (HSC)'}] }
+    ],
+    resultType: 'marksheet',
+    docType: 'Marksheet',
+  },
+  expiry: {
+    icon: '⏳', title: 'Document Expiry Checker',
+    subtitle: 'Check validity of Income Certificate, Domicile, Caste, EWS, and other govt docs',
+    endpoint: '/api/v1/documents/expiry/check',
+    accept: '.jpg,.jpeg,.png,.pdf,.webp',
+    extraFields: [
+      { name: 'doc_type_hint', label: 'Document Type', type: 'select',
+        options: [
+          {v:'',l:'Auto Detect'},
+          {v:'income_certificate',l:'Income Certificate'},
+          {v:'domicile_certificate',l:'Domicile Certificate'},
+          {v:'caste_certificate',l:'Caste Certificate'},
+          {v:'ews_certificate',l:'EWS Certificate'},
+          {v:'non_creamy_layer',l:'Non-Creamy Layer Certificate'},
+          {v:'birth_certificate',l:'Birth Certificate'},
+          {v:'medical_certificate',l:'Medical Certificate'},
+        ]
+      }
+    ],
+    resultType: 'expiry',
+    docType: 'Govt Certificate',
+  },
+  batch: {
+    icon: '📦', title: 'Batch Upload',
+    subtitle: 'Process up to 10 documents in a single request',
+    resultType: 'batch',
+    docType: 'Batch',
+  },
+  history: {
+    icon: '🕐', title: 'Scan History',
+    subtitle: 'View all previously processed documents in this session',
+    resultType: 'history',
+  },
+};
+
+// ── Utilities ────────────────────────────────────────────────────────────────
+function toast(msg, type='info') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `show ${type}`;
+  setTimeout(() => el.className = '', 2800);
+}
+
+function fmtSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/(1024*1024)).toFixed(1) + ' MB';
+}
+
+function fmtKey(k) {
+  return k.replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function syntaxHighlight(json) {
+  const str = typeof json === 'string' ? json : JSON.stringify(json, null, 2);
+  return str
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, m => {
+      if (/^"/.test(m)) return /:$/.test(m) ? `<span class="jk">${m}</span>` : `<span class="js">${m}</span>`;
+      if (/true|false/.test(m)) return `<span class="jb">${m}</span>`;
+      if (/null/.test(m)) return `<span class="jb">${m}</span>`;
+      return `<span class="jn">${m}</span>`;
+    });
+}
+
+function saveHistory(page, filename, result) {
+  history_data.unshift({
+    id: Date.now(),
+    page, filename,
+    docType: PAGES[page]?.docType || page,
+    icon: PAGES[page]?.icon || '📄',
+    success: result.success !== false,
+    time: new Date().toLocaleString(),
+    result,
+  });
+  if (history_data.length > 50) history_data = history_data.slice(0, 50);
+  localStorage.setItem('docHistory', JSON.stringify(history_data));
+}
+
+// ── Health Check ─────────────────────────────────────────────────────────────
+async function checkHealth() {
+  const dot = document.getElementById('healthDot');
+  const txt = document.getElementById('healthText');
+  dot.className = 'health-dot';
+  txt.textContent = 'Checking...';
+  try {
+    const r = await fetch(`${API}/health`);
+    const d = await r.json();
+    if (d.status === 'healthy') {
+      dot.className = 'health-dot ok';
+      txt.textContent = 'System Online';
+    } else {
+      dot.className = 'health-dot err';
+      txt.textContent = 'Degraded';
+    }
+    toast(`Tesseract: ${d.services?.tesseract || 'N/A'} | Gemini: ${d.services?.gemini_config || 'N/A'}`, 'info');
+  } catch(e) {
+    dot.className = 'health-dot err';
+    txt.textContent = 'Offline';
+    toast('Backend offline — is the server running?', 'error');
+  }
+}
+
+// ── Navigation ───────────────────────────────────────────────────────────────
+function showPage(page) {
+  currentPage = page;
+  document.querySelectorAll('.nav-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.page === page);
+  });
+  const p = PAGES[page];
+  if (!p) return;
+
+  if (page === 'history') { renderHistory(); return; }
+  if (page === 'batch')   { renderBatch();   return; }
+
+  const main = document.getElementById('main');
+  main.innerHTML = `
+    <div>
+      <div class="page-title">${p.icon} ${p.title}</div>
+      <div class="page-subtitle">${p.subtitle}</div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;">
+      <!-- Upload Panel -->
+      <div class="card">
+        <div class="card-title">Upload Document</div>
+
+        <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+          <input type="file" id="fileInput" accept="${p.accept}" onchange="handleFileSelect(event)">
+          <div class="upload-icon">📤</div>
+          <h3>Drop file here or click to browse</h3>
+          <p>Supports JPG, PNG, PDF, WebP • Max 10MB</p>
+        </div>
+
+        <div id="filePreview" class="hidden"></div>
+
+        ${p.extraFields.length ? `
+        <div style="margin-top:16px;">
+          ${p.extraFields.map(f => `
+            <div class="form-group" style="margin-bottom:12px;">
+              <label>${f.label}</label>
+              ${f.type === 'select' ? `
+                <select id="field_${f.name}">
+                  ${f.options.map(o => `<option value="${o.v}">${o.l}</option>`).join('')}
+                </select>` : `<input type="text" id="field_${f.name}" placeholder="${f.label}">`}
+            </div>`).join('')}
+        </div>` : ''}
+
+        <div class="toggle-row">
+          <span class="toggle-label">🔍 Enable OCR Pre-processing</span>
+          <button class="toggle on" id="ocrToggle" onclick="this.classList.toggle('on')" title="Toggle OCR"></button>
+        </div>
+
+        <button class="btn btn-primary" id="submitBtn" onclick="submitDocument('${page}')" disabled>
+          ✨ Extract with AI
+        </button>
+      </div>
+
+      <!-- Result Panel -->
+      <div id="resultPanel">
+        <div class="card" style="text-align:center;padding:48px 24px;color:var(--muted);">
+          <div style="font-size:48px;margin-bottom:12px;">🤖</div>
+          <div style="font-size:14px;font-weight:500;margin-bottom:6px;">Ready to Extract</div>
+          <div style="font-size:12px;">Upload a document and click Extract to see AI-powered results</div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  setupDropZone(page);
+}
+
+// ── File Handling ─────────────────────────────────────────────────────────────
+let selectedFile = null;
+
+function setupDropZone(page) {
+  const zone = document.getElementById('dropZone');
+  if (!zone) return;
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('dragover');
+    const f = e.dataTransfer.files[0];
+    if (f) selectFile(f);
+  });
+}
+
+function handleFileSelect(e) {
+  const f = e.target.files[0];
+  if (f) selectFile(f);
+}
+
+function selectFile(f) {
+  selectedFile = f;
+  const preview = document.getElementById('filePreview');
+  const ext = f.name.split('.').pop().toLowerCase();
+  const iconMap = { pdf:'📕', jpg:'🖼️', jpeg:'🖼️', png:'🖼️', webp:'🖼️' };
+  preview.innerHTML = `
+    <div class="file-preview">
+      <span style="font-size:22px;">${iconMap[ext] || '📄'}</span>
+      <div style="flex:1;min-width:0;">
+        <div class="file-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.name}</div>
+        <div class="file-size">${fmtSize(f.size)} • ${ext.toUpperCase()}</div>
+      </div>
+      <button class="remove-btn" onclick="clearFile()">✕</button>
+    </div>`;
+  preview.classList.remove('hidden');
+  document.getElementById('submitBtn').disabled = false;
+}
+
+function clearFile() {
+  selectedFile = null;
+  document.getElementById('filePreview').classList.add('hidden');
+  document.getElementById('filePreview').innerHTML = '';
+  document.getElementById('submitBtn').disabled = true;
+  document.getElementById('fileInput').value = '';
+}
+
+// ── Submit ────────────────────────────────────────────────────────────────────
+async function submitDocument(page) {
+  if (!selectedFile) return;
+  const p = PAGES[page];
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loader"></span> Processing...';
+
+  // Show processing state
+  document.getElementById('resultPanel').innerHTML = `
+    <div class="processing-card">
+      <div class="big-loader"></div>
+      <h3>Analyzing Document...</h3>
+      <p>OCR extraction → Gemini AI processing → Structured output</p>
+    </div>`;
+
+  const fd = new FormData();
+  fd.append('file', selectedFile);
+
+  // OCR toggle
+  const ocrToggle = document.getElementById('ocrToggle');
+  fd.append('use_ocr', ocrToggle?.classList.contains('on') ? 'true' : 'false');
+
+  // Extra fields
+  (p.extraFields || []).forEach(f => {
+    const el = document.getElementById(`field_${f.name}`);
+    if (el) fd.append(f.name, el.value);
+  });
+
+  const t0 = Date.now();
+  try {
+    const res = await fetch(`${API}${p.endpoint}`, { method: 'POST', body: fd });
+    const data = await res.json();
+    const elapsed = Date.now() - t0;
+
+    saveHistory(page, selectedFile.name, data);
+    renderResult(page, data, selectedFile.name, elapsed);
+    toast('✅ Extraction complete!', 'success');
+  } catch(e) {
+    document.getElementById('resultPanel').innerHTML = `
+      <div class="card">
+        <div class="error-box">⚠️ <div><strong>Request failed:</strong> ${e.message}<br>
+        <small>Make sure the backend is running on port 8000.</small></div></div>
+      </div>`;
+    toast('Request failed — check backend', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '✨ Extract with AI';
+  }
+}
+
+// ── Result Renderers ──────────────────────────────────────────────────────────
+function renderResult(page, data, filename, elapsed) {
+  const p = PAGES[page];
+  const panel = document.getElementById('resultPanel');
+
+  if (data.errors?.length && !data.extracted_data && !data.data) {
+    panel.innerHTML = `<div class="card"><div class="error-box">⚠️ <div>
+      <strong>Extraction failed:</strong><br>${data.errors.join('<br>')}
+    </div></div></div>`;
+    return;
+  }
+
+  if (p.resultType === 'expiry') { renderExpiryResult(data, panel, elapsed, filename); return; }
+  if (p.resultType === 'marksheet') { renderMarksheetResult(data, panel, elapsed, filename); return; }
+  renderFieldsResult(data, panel, elapsed, filename, p);
+}
+
+function renderFieldsResult(data, panel, elapsed, filename, p) {
+  const fields = data.data || {};
+  const conf = data.confidence ? Math.round(data.confidence * 100) : null;
+  const success = data.success !== false;
+  const fieldCount = Object.keys(fields).filter(k => fields[k] !== null && fields[k] !== undefined).length;
+
+  let html = `
+    <div class="card">
+      <div class="result-header">
+        <div>
+          <div style="font-size:14px;font-weight:600;margin-bottom:4px;">${filename}</div>
+          <div style="font-size:12px;color:var(--muted);">${fieldCount} fields extracted • ${(elapsed/1000).toFixed(1)}s</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+          <span class="badge ${success ? 'badge-success' : 'badge-danger'}">${success ? '✓ Success' : '✗ Failed'}</span>
+          ${data.document_type ? `<span class="badge badge-info">${data.document_type}</span>` : ''}
+        </div>
+      </div>`;
+
+  if (conf !== null) html += `
+    <div class="confidence-bar">
+      <label>Confidence</label>
+      <div class="bar-track"><div class="bar-fill" style="width:${conf}%"></div></div>
+      <span>${conf}%</span>
+    </div>`;
+
+  // Warnings
+  if (data.warnings?.length) html += data.warnings.map(w =>
+    `<div style="font-size:12px;color:var(--warning);margin-bottom:8px;">⚠️ ${w}</div>`).join('');
+
+  html += `
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab(this,'fields-view')">Fields</button>
+        <button class="tab" onclick="switchTab(this,'json-view')">Raw JSON</button>
+      </div>
+      <div id="fields-view">
+        <div class="fields-grid">
+          ${Object.entries(fields).map(([k, v]) => `
+            <div class="field-item">
+              <div class="field-key">${fmtKey(k)}</div>
+              <div class="field-val ${v === null || v === undefined || v === '' ? 'null-val' : ''}">
+                ${v === null || v === undefined || v === '' ? 'Not found' : formatFieldValue(k, v)}
+              </div>
+            </div>`).join('')}
+        </div>
+      </div>
+      <div id="json-view" class="hidden">
+        <div class="json-viewer">${syntaxHighlight(data)}</div>
+      </div>
+    </div>`;
+
+  panel.innerHTML = html;
+}
+
+function renderMarksheetResult(data, panel, elapsed, filename) {
+  const d = data.data || {};
+  const subjects = d.subjects || [];
+  const conf = data.confidence ? Math.round(data.confidence * 100) : null;
+  const success = data.success !== false;
+
+  const summaryFields = Object.entries(d).filter(([k]) => k !== 'subjects');
+
+  let html = `
+    <div class="card">
+      <div class="result-header">
+        <div>
+          <div style="font-size:14px;font-weight:600;margin-bottom:4px;">${filename}</div>
+          <div style="font-size:12px;color:var(--muted);">${subjects.length} subjects • ${(elapsed/1000).toFixed(1)}s</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+          <span class="badge ${success ? 'badge-success' : 'badge-danger'}">${success ? '✓ Success' : '✗ Failed'}</span>
+          ${d.exam_class ? `<span class="badge badge-info">Class ${d.exam_class}</span>` : ''}
+          ${d.result ? `<span class="badge ${d.result==='PASS'?'badge-success':d.result==='DISTINCTION'?'badge-warning':'badge-danger'}">${d.result}</span>` : ''}
+        </div>
+      </div>`;
+
+  if (conf !== null) html += `
+    <div class="confidence-bar">
+      <label>Confidence</label>
+      <div class="bar-track"><div class="bar-fill" style="width:${conf}%"></div></div>
+      <span>${conf}%</span>
+    </div>`;
+
+  html += `
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab(this,'ms-overview')">Overview</button>
+        <button class="tab" onclick="switchTab(this,'ms-subjects')">Subjects (${subjects.length})</button>
+        <button class="tab" onclick="switchTab(this,'ms-json')">Raw JSON</button>
+      </div>
+
+      <div id="ms-overview">
+        <div class="fields-grid">
+          ${summaryFields.map(([k,v]) => `
+            <div class="field-item">
+              <div class="field-key">${fmtKey(k)}</div>
+              <div class="field-val ${!v?'null-val':''}">${v || 'Not found'}</div>
+            </div>`).join('')}
+        </div>
+      </div>
+
+      <div id="ms-subjects" class="hidden">
+        ${subjects.length ? `
+        <div style="overflow-x:auto;">
+        <table class="marks-table">
+          <thead><tr>
+            <th>Subject</th><th>Max Marks</th><th>Marks Obtained</th><th>Grade</th><th>Status</th>
+          </tr></thead>
+          <tbody>
+            ${subjects.map(s => `<tr>
+              <td>${s.subject_name || '—'}</td>
+              <td>${s.max_marks ?? '—'}</td>
+              <td style="font-weight:600">${s.marks_obtained ?? '—'}</td>
+              <td>${s.grade ? `<span class="badge badge-info">${s.grade}</span>` : '—'}</td>
+              <td>${s.pass_fail ? `<span class="badge ${s.pass_fail==='PASS'?'badge-success':'badge-danger'}">${s.pass_fail}</span>` : '—'}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table></div>` : '<p style="color:var(--muted);font-size:13px;">No subject data found</p>'}
+      </div>
+
+      <div id="ms-json" class="hidden">
+        <div class="json-viewer">${syntaxHighlight(data)}</div>
+      </div>
+    </div>`;
+
+  panel.innerHTML = html;
+}
+
+function renderExpiryResult(data, panel, elapsed, filename) {
+  const statusMap = {
+    VALID: { badge: 'badge-success', icon: '✅', label: 'Valid' },
+    EXPIRED: { badge: 'badge-danger', icon: '❌', label: 'Expired' },
+    EXPIRING_SOON: { badge: 'badge-warning', icon: '⚠️', label: 'Expiring Soon' },
+    UNKNOWN: { badge: 'badge-muted', icon: '❓', label: 'Unknown' },
+  };
+  const st = statusMap[data.status] || statusMap.UNKNOWN;
+
+  let html = `
+    <div class="card">
+      <div class="result-header">
+        <div>
+          <div style="font-size:14px;font-weight:600;margin-bottom:4px;">${filename}</div>
+          <div style="font-size:12px;color:var(--muted);">${data.document_type || 'Certificate'} • ${(elapsed/1000).toFixed(1)}s</div>
+        </div>
+        <span class="badge ${st.badge}" style="font-size:13px;padding:6px 14px;">${st.icon} ${st.label}</span>
+      </div>
+
+      <div class="expiry-summary">
+        <div class="expiry-stat">
+          <div class="stat-val" style="color:${data.issue_date?'var(--accent)':'var(--muted)'}">
+            ${data.issue_date || '—'}
+          </div>
+          <div class="stat-label">Issue Date</div>
+        </div>
+        <div class="expiry-stat">
+          <div class="stat-val" style="color:${data.expiry_date?'var(--warning)':'var(--muted)'}">
+            ${data.expiry_date || '—'}
+          </div>
+          <div class="stat-label">Expiry Date</div>
+        </div>
+        <div class="expiry-stat">
+          <div class="stat-val" style="color:${
+            data.days_remaining > 30 ? 'var(--success)'
+            : data.days_remaining > 0 ? 'var(--warning)'
+            : data.days_since_expiry ? 'var(--danger)'
+            : 'var(--muted)'}">
+            ${data.days_remaining !== null ? `${data.days_remaining}d`
+              : data.days_since_expiry !== null ? `-${data.days_since_expiry}d`
+              : '—'}
+          </div>
+          <div class="stat-label">${data.days_remaining !== null ? 'Days Left' : data.days_since_expiry !== null ? 'Days Overdue' : 'Days'}</div>
+        </div>
+      </div>`;
+
+  if (data.warnings?.length) html += data.warnings.map(w =>
+    `<div style="font-size:12px;color:var(--warning);margin-bottom:8px;padding:8px 12px;background:rgba(245,158,11,.07);border-radius:6px;">⚠️ ${w}</div>`).join('');
+  if (data.errors?.length) html += data.errors.map(e =>
+    `<div class="error-box" style="margin-bottom:8px;">⚠️ ${e}</div>`).join('');
+
+  html += `
+      <div class="tabs" style="margin-top:8px;">
+        <button class="tab active" onclick="switchTab(this,'exp-fields')">Extracted Data</button>
+        <button class="tab" onclick="switchTab(this,'exp-json')">Raw JSON</button>
+      </div>
+      <div id="exp-fields">
+        <div class="fields-grid">
+          ${Object.entries(data.extracted_data || {}).map(([k,v]) => `
+            <div class="field-item">
+              <div class="field-key">${fmtKey(k)}</div>
+              <div class="field-val ${!v?'null-val':''}">${v || 'Not found'}</div>
+            </div>`).join('')}
+        </div>
+        ${!Object.keys(data.extracted_data||{}).length ? '<p style="color:var(--muted);font-size:13px;">No fields extracted</p>' : ''}
+      </div>
+      <div id="exp-json" class="hidden">
+        <div class="json-viewer">${syntaxHighlight(data)}</div>
+      </div>
+    </div>`;
+
+  panel.innerHTML = html;
+}
+
+function formatFieldValue(key, val) {
+  if (typeof val === 'object') return JSON.stringify(val);
+  if (typeof val === 'boolean') return val ? '✓ Yes' : '✗ No';
+  return String(val);
+}
+
+function switchTab(btn, targetId) {
+  const parent = btn.closest('.card');
+  parent.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  const tabIds = ['fields-view','json-view','ms-overview','ms-subjects','ms-json','exp-fields','exp-json'];
+  tabIds.forEach(id => {
+    const el = parent.querySelector(`#${id}`);
+    if (el) el.classList.toggle('hidden', id !== targetId);
+  });
+}
+
+// ── Batch Upload ──────────────────────────────────────────────────────────────
+function renderBatch() {
+  const main = document.getElementById('main');
+  main.innerHTML = `
+    <div>
+      <div class="page-title">📦 Batch Upload</div>
+      <div class="page-subtitle">Upload up to 10 documents at once — auto-detects document type for each</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;">
+      <div class="card">
+        <div class="card-title">Select Files</div>
+        <div class="upload-zone" style="padding:32px 16px;">
+          <input type="file" id="batchInput" multiple accept=".jpg,.jpeg,.png,.pdf,.webp" onchange="handleBatchSelect(event)">
+          <div class="upload-icon">📦</div>
+          <h3>Select Multiple Files</h3>
+          <p>Up to 10 files • JPG, PNG, PDF, WebP</p>
+        </div>
+        <div id="batchList" style="margin-top:12px;"></div>
+        <div class="form-group" style="margin-top:16px;">
+          <label>Document Types (comma-separated or "auto")</label>
+          <input type="text" id="batchTypes" value="auto" placeholder="auto, or: aadhaar,pan,marksheet,...">
+        </div>
+        <button class="btn btn-primary" id="batchBtn" onclick="submitBatch()" disabled>
+          🚀 Process Batch
+        </button>
+      </div>
+      <div id="batchResultPanel">
+        <div class="card" style="text-align:center;padding:48px 24px;color:var(--muted);">
+          <div style="font-size:48px;margin-bottom:12px;">📦</div>
+          <div style="font-size:14px;font-weight:500;">Batch results will appear here</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+let batchFiles = [];
+function handleBatchSelect(e) {
+  batchFiles = Array.from(e.target.files).slice(0, 10);
+  const list = document.getElementById('batchList');
+  list.innerHTML = batchFiles.map((f,i) => `
+    <div class="file-preview" style="margin-bottom:6px;">
+      <span>📄</span>
+      <div class="file-name">${f.name}</div>
+      <div class="file-size">${fmtSize(f.size)}</div>
+    </div>`).join('');
+  document.getElementById('batchBtn').disabled = batchFiles.length === 0;
+}
+
+async function submitBatch() {
+  if (!batchFiles.length) return;
+  const btn = document.getElementById('batchBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loader"></span> Processing...';
+  document.getElementById('batchResultPanel').innerHTML = `
+    <div class="processing-card">
+      <div class="big-loader"></div>
+      <h3>Processing ${batchFiles.length} files...</h3>
+      <p>This may take a moment</p>
+    </div>`;
+
+  const fd = new FormData();
+  batchFiles.forEach(f => fd.append('files', f));
+  fd.append('doc_types', document.getElementById('batchTypes').value || 'auto');
+
+  try {
+    const res = await fetch(`${API}/api/v1/documents/batch/read`, { method:'POST', body: fd });
+    const data = await res.json();
+    let html = `<div class="card">
+      <div style="font-size:15px;font-weight:600;margin-bottom:16px;">
+        Results — ${data.total} files processed
+      </div>`;
+    (data.results || []).forEach(r => {
+      const ok = !r.error && r.success !== false;
+      html += `
+        <div style="padding:12px 14px;background:var(--surface2);border:1px solid var(--border);
+          border-radius:8px;margin-bottom:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <div style="font-size:13px;font-weight:500;">📄 ${r.filename}</div>
+            <span class="badge ${ok?'badge-success':'badge-danger'}">${ok?'✓ Done':'✗ Error'}</span>
+          </div>
+          ${r.error ? `<div style="font-size:12px;color:var(--danger);">${r.error}</div>` : `
+          <div class="fields-grid" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr));">
+            ${Object.entries(r.data||{}).filter(([,v])=>v).slice(0,6).map(([k,v])=>`
+              <div class="field-item" style="padding:8px 10px;">
+                <div class="field-key" style="font-size:9px;">${fmtKey(k)}</div>
+                <div class="field-val" style="font-size:12px;">${v}</div>
+              </div>`).join('')}
+          </div>`}
+        </div>`;
+    });
+    html += '</div>';
+    document.getElementById('batchResultPanel').innerHTML = html;
+    toast(`Batch complete — ${data.total} files processed`, 'success');
+  } catch(e) {
+    document.getElementById('batchResultPanel').innerHTML = `<div class="card"><div class="error-box">⚠️ ${e.message}</div></div>`;
+    toast('Batch request failed', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '🚀 Process Batch';
+  }
+}
+
+// ── History ───────────────────────────────────────────────────────────────────
+function renderHistory() {
+  const main = document.getElementById('main');
+  if (!history_data.length) {
+    main.innerHTML = `
+      <div>
+        <div class="page-title">🕐 Scan History</div>
+        <div class="page-subtitle">All documents processed in this session</div>
+      </div>
+      <div class="card" style="text-align:center;padding:64px 24px;color:var(--muted);">
+        <div style="font-size:48px;margin-bottom:12px;">🗂️</div>
+        <div style="font-size:14px;font-weight:500;">No history yet</div>
+        <div style="font-size:12px;margin-top:4px;">Processed documents will appear here</div>
+      </div>`;
+    return;
+  }
+
+  main.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div class="page-title">🕐 Scan History</div>
+        <div class="page-subtitle">${history_data.length} documents processed</div>
+      </div>
+      <button class="btn btn-sm" onclick="clearHistory()">🗑 Clear All</button>
+    </div>
+    <div id="historyList">
+      ${history_data.map(item => `
+        <div class="history-item" onclick="showHistoryDetail(${item.id})">
+          <div class="history-icon">${item.icon}</div>
+          <div class="history-info">
+            <div class="h-name">${item.filename}</div>
+            <div class="h-meta">${item.docType}</div>
+          </div>
+          <div style="text-align:right;">
+            <span class="badge ${item.success?'badge-success':'badge-danger'}" style="margin-bottom:4px;display:inline-flex;">
+              ${item.success?'✓':'✗'}
+            </span>
+            <div class="history-time">${item.time}</div>
+          </div>
+        </div>`).join('')}
+    </div>`;
+}
+
+function showHistoryDetail(id) {
+  const item = history_data.find(h => h.id === id);
+  if (!item) return;
+  const existing = document.getElementById('historyDetail');
+  if (existing) existing.remove();
+  const div = document.createElement('div');
+  div.id = 'historyDetail';
+  div.className = 'card';
+  div.style.marginTop = '16px';
+  div.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div style="font-size:14px;font-weight:600;">${item.icon} ${item.filename}</div>
+      <button class="btn btn-sm" onclick="document.getElementById('historyDetail').remove()">✕ Close</button>
+    </div>
+    <div class="json-viewer">${syntaxHighlight(item.result)}</div>`;
+  document.getElementById('main').appendChild(div);
+}
+
+function clearHistory() {
+  history_data = [];
+  localStorage.removeItem('docHistory');
+  renderHistory();
+  toast('History cleared', 'info');
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+showPage('aadhaar');
+checkHealth();
+</script>
+</body>
+</html>
