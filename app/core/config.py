@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     OUTPUT_DIR: str = "./outputs"
 
     # Database
-    DATABASE_URL: str = "postgresql+asyncpg://postgres:7301@localhost/docreader"
+    DATABASE_URL: str = "postgresql+asyncpg://postgres:pass@localhost/docreader"
 
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
