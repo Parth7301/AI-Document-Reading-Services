@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     APP_HOST: str = "0.0.0.0"
     APP_PORT: int = 8000
     APP_DEBUG: bool = False
-    SECRET_KEY: str = "8f794d6889dde70c48007894f608df86bd9443aa71b972d682c8ecd796164d49"
+    SECRET_KEY: str = "Your_Secret_Key"
     API_VERSION: str = "v1"
 
     # Gemini
